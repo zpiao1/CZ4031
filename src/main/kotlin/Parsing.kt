@@ -1,39 +1,53 @@
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.DefaultHandler
+import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import javax.xml.parsers.SAXParserFactory
 
-val FIELDS = listOf("type", "pubkey", "mdate") +
-        "editor|title|booktitle|pages|year|address|journal|volume|number|month|url|ee|cdrom|cite|publisher|note|crossref|isbn|series|school|chapter"
-                .split("|")
+val FIELDS = listOf("type", "pubkey") + "title|year|crossref".split("|")
 
 val ELEMENTS = "article|inproceedings|proceedings|book|incollection".split("|").toHashSet()
-
-val PATH = "C:\\Users\\zpiao\\Desktop\\CZ4031"
 
 fun main(args: Array<String>) {
     System.setProperty("jdk.xml.entityExpansionLimit", "0")
     val factory = SAXParserFactory.newInstance()
     val saxParser = factory.newSAXParser()
-    val handler = Handler()
     println("Enter the filename:")
     val filename = readLine()
-    if (filename != null) {
-        saxParser.parse(filename, handler)
-        handler.dispose()
+    println("Enter output path:")
+    val path = readLine()
+    if (filename != null && path != null) {
+        Handler(path).use {
+            saxParser.parse(filename, it)
+        }
     }
 }
 
-class Handler : DefaultHandler() {
+class Handler(outputPath: String) : DefaultHandler(), AutoCloseable {
     private val elements = mutableListOf<String>()
     private val map = hashMapOf<String, Any>()
     private var authorIndex = -1
 
-    private val publicationFile = PrintWriter(OutputStreamWriter(FileOutputStream("$PATH\\publication.csv"), Charsets.UTF_8), true)
-    private val authorFile = PrintWriter(OutputStreamWriter(FileOutputStream("$PATH\\author.csv"), Charsets.UTF_8), true)
-    private val publication_authorFile = PrintWriter(OutputStreamWriter(FileOutputStream("$PATH\\publication_author.csv"), Charsets.UTF_8), true)
+    private val publicationFile = PrintWriter(
+        OutputStreamWriter(
+            FileOutputStream("$outputPath${File.separatorChar}publication.csv"),
+            Charsets.UTF_8
+        ), true
+    )
+    private val authorFile = PrintWriter(
+        OutputStreamWriter(
+            FileOutputStream("$outputPath${File.separatorChar}author.csv"),
+            Charsets.UTF_8
+        ), true
+    )
+    private val publication_authorFile = PrintWriter(
+        OutputStreamWriter(
+            FileOutputStream("$outputPath${File.separatorChar}publication_author.csv"),
+            Charsets.UTF_8
+        ), true
+    )
 
     init {
         publicationFile.println(FIELDS.joinToString(","))
@@ -42,11 +56,6 @@ class Handler : DefaultHandler() {
     }
 
     override fun startElement(uri: String, localName: String, qName: String, attributes: Attributes) {
-//        println("startElement: qName=$qName")
-//        val summary = attributes.summary
-//        if (summary.isNotBlank()) {
-//            print(summary)
-//        }
         elements += qName
         if (qName == "author") {
             authorIndex++
@@ -57,17 +66,12 @@ class Handler : DefaultHandler() {
             if (pubkey != null) {
                 map["pubkey"] = pubkey
             }
-            val mdate = attributes.getValue("mdate")
-            if (mdate != null) {
-                map["mdate"] = mdate
-            }
         }
     }
 
     @Suppress("UNCHECKED_CAST")
     override fun characters(ch: CharArray, start: Int, length: Int) {
         val string = String(ch, start, length)
-//        println("characters: $string")
         if (elements.last() == "author") {
             val authorList = map.getOrPut("author") { mutableListOf<String>() } as MutableList<String>
             if (authorList.size <= authorIndex) {
@@ -100,23 +104,25 @@ class Handler : DefaultHandler() {
 
     @Suppress("UNCHECKED_CAST")
     override fun endElement(uri: String, localName: String, qName: String) {
-//        println("endElement: qName=$qName")
         elements.removeAt(elements.lastIndex)
         if (elements.size == 1) {
-            map.replaceAll { _, u ->
-                when (u) {
-                    is String -> u.trim()
-                    is List<*> -> u.map {
+            val authors = map["author"] as List<String>?
+            if (authors == null || authors.isEmpty()) {
+                return
+            }
+            map.replaceAll { _, value ->
+                when (value) {
+                    is String -> value.trim()
+                    is List<*> -> value.map {
                         if (it is String) {
                             it.trim()
                         } else {
                             it
                         }
                     }
-                    else -> u
+                    else -> value
                 }
             }
-//            println(map)
 
             if (qName in ELEMENTS) {
                 println("Writing to publication.csv...")
@@ -147,21 +153,9 @@ class Handler : DefaultHandler() {
         }
     }
 
-    fun dispose() {
+    override fun close() {
         publicationFile.close()
         authorFile.close()
         publication_authorFile.close()
     }
 }
-
-val Attributes.summary: String
-    get() {
-        val stringBuilder = StringBuilder()
-        repeat(length) {
-            val type = getType(it)
-            val qName = getQName(it)
-            val value = getValue(it)
-            stringBuilder.append("type=$type, qName=$qName, value=$value\n")
-        }
-        return stringBuilder.toString()
-    }
