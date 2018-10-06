@@ -61,6 +61,7 @@ class Handler(outputPath: String) : DefaultHandler(), AutoCloseable {
             authorIndex++
         }
         if (elements.size == 2) {
+            map.clear()
             map["type"] = qName
             val pubkey = attributes.getValue("key")
             if (pubkey != null) {
@@ -106,10 +107,6 @@ class Handler(outputPath: String) : DefaultHandler(), AutoCloseable {
     override fun endElement(uri: String, localName: String, qName: String) {
         elements.removeAt(elements.lastIndex)
         if (elements.size == 1) {
-            val authors = map["author"] as List<String>?
-            if (authors == null || authors.isEmpty()) {
-                return
-            }
             map.replaceAll { _, value ->
                 when (value) {
                     is String -> value.trim()
@@ -124,9 +121,13 @@ class Handler(outputPath: String) : DefaultHandler(), AutoCloseable {
                 }
             }
 
-            if (qName in ELEMENTS) {
+            val pubkey = map["pubkey"] as String?
+            val type = map["type"]
+            val title = map["title"]
+            val year = map["year"]
+            if (qName in ELEMENTS && pubkey != null && type != null && title != null && year != null) {
                 println("Writing to publication.csv...")
-                publicationFile.println(FIELDS.asSequence().map { map[it] as String? ?: "" }.joinToString(",") {
+                publicationFile.println(FIELDS.asSequence().map { map[it] as String? ?: "NULL" }.joinToString(",") {
                     val doubleQuoted = if ('"' in it) {
                         it.replace("\"", "\"\"")
                     } else {
@@ -140,15 +141,15 @@ class Handler(outputPath: String) : DefaultHandler(), AutoCloseable {
                 })
                 println("Writing to author.csv...")
                 val authors = map["author"] as List<String>? ?: listOf()
-                authorFile.println(authors.joinToString("\n"))
+                for (author in authors) {
+                    authorFile.println(author)
+                }
                 println("Writing to publication_author.csv...")
-                val pubkey = map["pubkey"] as String? ?: ""
                 for (author in authors) {
                     publication_authorFile.println("$pubkey,$author")
                 }
             }
 
-            map.clear()
             authorIndex = -1
         }
     }
