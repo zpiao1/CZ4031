@@ -15,3 +15,4 @@ Instructions:
       \timing
       ```
       before the queries.
+6. PostgreSQL controls size of cache via the variable `shared_buffers`. If you would like to change it, find `postgresql.conf` in the path of installation, and modify the value inside. 
