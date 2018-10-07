@@ -2,7 +2,7 @@ CREATE DATABASE cz4031 ENCODING 'UTF8';
 
 \connect cz4031;
 
-UPDATE CLIENT_ENCODING TO 'UTF8';
+SET CLIENT_ENCODING TO 'UTF8';
 
 DROP TABLE IF EXISTS publication_author;
 DROP TABLE IF EXISTS raw_publication;
@@ -52,7 +52,7 @@ CREATE TABLE publication_author (
 
 \copy raw_publication_author (pubkey, name) FROM 'C:/Users/zpiao/Desktop/CZ4031/data/publication_author.csv' DELIMITER ',' CSV HEADER;
 
-UPDATE raw_publication UPDATE crossref = NULL WHERE crossref = 'NULL';
+UPDATE raw_publication SET crossref = NULL WHERE crossref = 'NULL';
 
 INSERT INTO author (name)
 SELECT DISTINCT ON (name) name FROM raw_author;
@@ -61,7 +61,7 @@ INSERT INTO publication (type, pubkey, title, year)
 SELECT DISTINCT ON (pubkey) A.type, A.pubkey, A.title, A.year FROM raw_publication AS A;
 
 UPDATE publication
-UPDATE crossref = B.pubid
+SET crossref = B.pubid
 FROM publication AS B, raw_publication AS C
 WHERE publication.pubkey = C.pubkey AND C.crossref = B.pubkey;
 
