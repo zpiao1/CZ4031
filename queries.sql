@@ -33,7 +33,7 @@ AND C.pubid = A.pubid;
 SELECT A.pubid, A.type, A.pubkey, A.title, A.year, A.crossref
 FROM publication AS A, author AS B, publication_author AS C, publication AS D
 WHERE B.name = 'Aditya G. Parameswaran'
-AND D.pubkey LIKE '%sigmod%'
+AND D.pubkey LIKE '%sigmod%' -- '%kdd%' for half size
 AND D.year = 2015
 AND B.authorid = C.authorid
 AND C.pubid = A.pubid
@@ -46,7 +46,7 @@ WHERE authorid IN (
     SELECT A.authorid
     FROM publication_author AS A, publication AS B, publication AS C
     WHERE C.year = 2015
-    AND C.pubkey LIKE '%sigmod%'
+    AND C.pubkey LIKE '%sigmod%' -- '%green%' for half size
     AND C.pubid = B.crossref
     AND B.pubid = A.pubid
     GROUP BY A.authorid
