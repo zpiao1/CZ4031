@@ -1,0 +1,119 @@
+- Plan:
+    Node Type: "Aggregate"
+    Strategy: "Sorted"
+    Partial Mode: "Finalize"
+    Parallel Aware: false
+    Startup Cost: 155698.23
+    Total Cost: 155698.36
+    Plan Rows: 5
+    Plan Width: 19
+    Actual Startup Time: 4034.745
+    Actual Total Time: 4034.749
+    Actual Rows: 5
+    Actual Loops: 1
+    Output:
+      - "type"
+      - "count(*)"
+    Group Key:
+      - "publication.type"
+    Plans:
+      - Node Type: "Sort"
+        Parent Relationship: "Outer"
+        Parallel Aware: false
+        Startup Cost: 155698.23
+        Total Cost: 155698.26
+        Plan Rows: 10
+        Plan Width: 19
+        Actual Startup Time: 4034.740
+        Actual Total Time: 4034.741
+        Actual Rows: 15
+        Actual Loops: 1
+        Output:
+          - "type"
+          - "(PARTIAL count(*))"
+        Sort Key:
+          - "publication.type"
+        Sort Method: "quicksort"
+        Sort Space Used: 25
+        Sort Space Type: "Memory"
+        Plans:
+          - Node Type: "Gather"
+            Parent Relationship: "Outer"
+            Parallel Aware: false
+            Startup Cost: 155697.02
+            Total Cost: 155698.07
+            Plan Rows: 10
+            Plan Width: 19
+            Actual Startup Time: 4034.059
+            Actual Total Time: 4034.619
+            Actual Rows: 15
+            Actual Loops: 1
+            Output:
+              - "type"
+              - "(PARTIAL count(*))"
+            Workers Planned: 2
+            Workers Launched: 2
+            Single Copy: false
+            Plans:
+              - Node Type: "Aggregate"
+                Strategy: "Hashed"
+                Partial Mode: "Partial"
+                Parent Relationship: "Outer"
+                Parallel Aware: false
+                Startup Cost: 154697.02
+                Total Cost: 154697.07
+                Plan Rows: 5
+                Plan Width: 19
+                Actual Startup Time: 4024.138
+                Actual Total Time: 4024.139
+                Actual Rows: 5
+                Actual Loops: 3
+                Output:
+                  - "type"
+                  - "PARTIAL count(*)"
+                Group Key:
+                  - "publication.type"
+                Workers:
+                  - Worker Number: 0
+                    Actual Startup Time: 4019.365
+                    Actual Total Time: 4019.366
+                    Actual Rows: 5
+                    Actual Loops: 1
+                  - Worker Number: 1
+                    Actual Startup Time: 4019.381
+                    Actual Total Time: 4019.382
+                    Actual Rows: 5
+                    Actual Loops: 1
+                Plans:
+                  - Node Type: "Seq Scan"
+                    Parent Relationship: "Outer"
+                    Parallel Aware: true
+                    Relation Name: "publication"
+                    Schema: "public"
+                    Alias: "publication"
+                    Startup Cost: 0.00
+                    Total Cost: 147525.22
+                    Plan Rows: 1434360
+                    Plan Width: 11
+                    Actual Startup Time: 0.859
+                    Actual Total Time: 3817.475
+                    Actual Rows: 1155328
+                    Actual Loops: 3
+                    Output:
+                      - "type"
+                    Filter: "((publication.year >= 2000) AND (publication.year <= 2017))"
+                    Rows Removed by Filter: 258284
+                    Workers:
+                      - Worker Number: 0
+                        Actual Startup Time: 0.083
+                        Actual Total Time: 3812.794
+                        Actual Rows: 1152032
+                        Actual Loops: 1
+                      - Worker Number: 1
+                        Actual Startup Time: 0.077
+                        Actual Total Time: 3813.228
+                        Actual Rows: 1151895
+                        Actual Loops: 1
+  Planning Time: 2.427
+  Triggers:
+  Execution Time: 4036.265
