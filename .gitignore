@@ -109,6 +109,8 @@ fabric.properties
 # Editor-based Rest Client
 .idea/httpRequests
 
+__pycache__
+
 .idea
 .gradle
 .
