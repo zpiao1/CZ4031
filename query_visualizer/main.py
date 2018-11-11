@@ -28,16 +28,23 @@ def main():
 
     match_dict = build_relation(query_formatted, root)
     print(match_dict)
+
+    # Pretty printing match_dict
     for key, value in match_dict.items():
         start = key
         end = key
-        while query_formatted[end] is not ' ' and query_formatted[end] is not '(' and query_formatted[end] is not ')' and query_formatted[end] is not '\n' and end < len(str(query_formatted))-1:
+        while query_formatted[end] not in ' ()\n,' and end < len(str(query_formatted))-1:
             end += 1
+
         print('=====================')
         print('Token - ' + query_formatted[start:end])
         print('Nodes - ' + str(value))
 
 
+'''
+Build tree recursively, Some operations are commented out for making result looks clearer while testing.
+Currently using Node Type as node id and it is not unique. If needed can use a unique identifier for id.
+'''
 def build_tree(plans_list, parent=None):
     result_list = []
     for plan in plans_list:
@@ -47,6 +54,7 @@ def build_tree(plans_list, parent=None):
         else:
             node = AnyNode(id=node_type, node_type=node_type, parent=parent)
 
+        # Setting the key attributes that are going to be used for searching later
         if node_type in node_types.KEY_PROPERTY:
             key_properties = node_types.KEY_PROPERTY[node_type]
             for key_property in key_properties:
@@ -56,8 +64,9 @@ def build_tree(plans_list, parent=None):
         # if "Output" in plan:
         #     setattr(node, "Output", plan["Output"])
         if "Plans" in plan:
-            #setattr(node, "Plans", build_tree(plan["Plans"], node))
+            # Build sub tree
             build_tree(plan["Plans"], node)
+            # setattr(node, "Plans", build_tree(plan["Plans"], node))
         if "Partial Mode" in plan:
             setattr(node, "Partial Mode", plan["Partial Mode"])
         if "Index Name" in plan:
@@ -79,9 +88,10 @@ def build_relation(query_formatted, tree):
             # +1 because of newline character has length 1
             processed_lines_len += len(lines[i-1]) + 1
 
-        tokenized_line = re.split(' |\(|\)', lines[i])
+        tokenized_line = re.split(' |\(|\)|,', lines[i])
+        print('tokenized line: ' + str(tokenized_line))
         for token in tokenized_line:
-            token = token.strip(' ,()')
+            #token = token.strip(' ,()')
             if token.upper() is not '' and token.upper() not in node_types.KEYWORDS:
                 index_in_query = lines[i].index(token) + processed_lines_len
                 match_dict[index_in_query] = search_tree(token, tree)
@@ -96,6 +106,7 @@ Return a list of matched nodes or None if no node matched
 def search_tree(token, root):
     matched_pos = []
     for node in PreOrderIter(root):
+        # If a node is not defined in our searchable list, skip it
         if getattr(node, 'id') not in node_types.KEY_PROPERTY:
             continue
         else:
