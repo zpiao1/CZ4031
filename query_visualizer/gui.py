@@ -19,13 +19,13 @@ class TreeFrame(tk.Frame):
         tk.Frame.__init__(self, root)
         self.button_font = font.Font(
             family='Google Sans Display', size=12, weight='bold')
-        self.canvas = tk.Canvas(
-            self, width=1000, height=1000, background='bisque')
-        self.canvas.grid(row=0, column=0, sticky="nsew")
-        self.buttons = []
+        self.canvas = tk.Canvas(self, background='bisque')
+        self.canvas.grid(row=0, column=0)
 
     def draw_tree(self, root_node):
-        self._draw_node(root_node, 12, 12)
+        bbox = self._draw_node(root_node, 12, 12)
+        self.canvas.configure(
+            width=bbox[2] - bbox[0] + 24, height=bbox[3] - bbox[1] + 24)
 
     def _draw_node(self, node, x1, y1):
         child_x = x1
@@ -60,17 +60,59 @@ class TreeFrame(tk.Frame):
         return left, top, right, bottom
 
 
+class QueryFrame(tk.Frame):
+    def __init__(self, root):
+        tk.Frame.__init__(self, root)
+        self.text_font = font.Font(family='Fira Code Retina', size=12)
+        self.text = tk.Text(self, height=10, font=self.text_font)
+        self.text.grid(row=0, column=0)
+
+    def set_query(self, query):
+        self.text.delete('1.0', 'end')
+        self.text.insert('end', query)
+
+
+def visualize_query(root, query, plan):
+    top_level = tk.Toplevel(root)
+    tree_frame = TreeFrame(top_level)
+    query_frame1 = QueryFrame(top_level)
+    query_frame1.set_query(query)
+    query_frame2 = QueryFrame(top_level)
+    query_frame1.grid(row=0, column=0)
+    query_frame2.grid(row=1, column=0)
+    tree_frame.grid(row=0, column=1, rowspan=2)
+
+    plan_json = json.loads(plan)
+    root_node = main.build_tree([plan_json[0]['Plan']])[0]
+    tree_frame.draw_tree(root_node)
+
+
 if __name__ == '__main__':
-    plan_path = './samplebig.json'
     node_types.init()
 
     root = tk.Tk()
-    tree_frame = TreeFrame(root)
-    tree_frame.pack(fill="both", expand=True)
 
-    with open(plan_path) as plan_file:
-        plan_json = json.loads(plan_file.read())
-        root_node = main.build_tree([plan_json[0]["Plan"]])[0]
-        tree_frame.draw_tree(root_node)
+    button_font = font.Font(
+        family='Google Sans Display', size=12, weight='bold')
+    text_font = font.Font(family='Fira Code Retina', size=12)
+    label_font = font.Font(family='Google Sans Display', size=12)
+
+    query_label = tk.Label(
+        root, text='Enter your SQL query here', font=label_font)
+    query_text = tk.Text(root, font=text_font, height=10)
+    plan_label = tk.Label(
+        root, text='Enter your execution plan here', font=label_font)
+    plan_text = tk.Text(root, font=text_font, height=10)
+
+    visualize_button = tk.Button(root, text='VISUALIZE', padx=12,
+                                 bg='#6200ee', fg='white', font=button_font, anchor='center')
+    visualize_button.bind('<Button-1>',
+                          lambda event: visualize_query(root, query_text.get('1.0', 'end-1c'), plan_text.get('1.0', 'end-1c')))
+
+    query_label.grid(row=0, sticky='w', padx=12, pady=(12, 0))
+    query_text.grid(row=1, padx=12)
+    plan_label.grid(row=2, sticky='w', padx=12, pady=(12, 0))
+    plan_text.grid(row=3, padx=12)
+    visualize_button.grid(row=4, sticky='e', padx=12, pady=12)
 
     root.mainloop()
