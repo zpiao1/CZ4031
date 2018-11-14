@@ -1,6 +1,7 @@
 import json
 import re
 import node_types
+import copy
 from anytree import AnyNode, RenderTree, PreOrderIter
 import sqlparse
 
@@ -31,14 +32,20 @@ def main():
 
     # Pretty printing match_dict
     for key, value in match_dict.items():
-        start = key
-        end = key
-        while query_formatted[end] not in ' ()\n,' and end < len(str(query_formatted))-1:
-            end += 1
-
+        start = key[0]
+        end = key[1]
         print('=====================')
         print('Token - ' + query_formatted[start:end])
         print('Nodes - ' + str(value))
+
+    match_dict = build_invert_relation(query_formatted, root)
+    for key, value in match_dict.items():
+        print('+++++++++++++++++++++')
+        print('Node = ' + str(key))
+        for pos in value:
+            start = pos[0]
+            end = pos[1]
+            print('tokens - ' + query_formatted[start:end] + '@' + str(start) + ':' + str(end))
 
 
 '''
@@ -63,38 +70,53 @@ def build_tree(plans_list, parent=None):
 
         # if "Output" in plan:
         #     setattr(node, "Output", plan["Output"])
+        raw_json = copy.deepcopy(plan)
         if "Plans" in plan:
-            # Build sub tree
-            build_tree(plan["Plans"], node)
-            # setattr(node, "Plans", build_tree(plan["Plans"], node))
+            build_tree(plan["Plans"], node)  # Build sub tree
+            raw_json.pop("Plans")   # Don't put the entire subtree in the raw json
         if "Partial Mode" in plan:
             setattr(node, "Partial Mode", plan["Partial Mode"])
         if "Index Name" in plan:
             setattr(node, "Index Name", plan["Index Name"])
-        #setattr(node, "Data", plan)
+        setattr(node, "raw_json", raw_json)
         result_list.append(node)
     return result_list
 
 
 '''
 Build relation between plan and query by iterating the tree
+Match a given token to all nodes that contain this token
 '''
 def build_relation(query_formatted, tree):
-    match_dict = {}   # {index of token: [list of matched nodes]}
-    lines = query_formatted.splitlines()    # Process query line by line
-    processed_lines_len = 0
-    for i in range(len(lines)):
-        if i > 0:
-            # +1 because of newline character has length 1
-            processed_lines_len += len(lines[i-1]) + 1
+    match_dict = {}   # {(start index of token, end): [list of matched nodes]}
+    tokens = tokenize_query(query_formatted)
+    for token, position in tokens.items():
+        match_dict[(position[0], position[1])] = search_tree(token, tree)
 
-        tokenized_line = re.split(' |\(|\)|,', lines[i])
-        print('tokenized line: ' + str(tokenized_line))
-        for token in tokenized_line:
-            #token = token.strip(' ,()')
-            if token.upper() is not '' and token.upper() not in node_types.KEYWORDS:
-                index_in_query = lines[i].index(token) + processed_lines_len
-                match_dict[index_in_query] = search_tree(token, tree)
+    return match_dict
+
+
+'''
+Build relation between plan and query by iterating the tree
+Match a given node to all tokens that correlate
+'''
+def build_invert_relation(query_formatted, tree):
+    match_dict = {}  # Has structure {node object : [list of tuples of index]}
+    tokens = tokenize_query(query_formatted)
+    for node in PreOrderIter(tree):
+        if getattr(node, 'id') not in node_types.KEY_PROPERTY:
+            continue
+        else:
+            for field in node_types.KEY_PROPERTY[getattr(node, 'id')]:
+                if not hasattr(node, field):
+                    continue
+                value = getattr(node, field)
+                matched_pos = search_query(value, tokens)
+                if matched_pos is not None:
+                    if node in match_dict:
+                        match_dict[node] = match_dict[node] + matched_pos
+                    else:
+                        match_dict[node] = matched_pos
 
     return match_dict
 
@@ -121,6 +143,56 @@ def search_tree(token, root):
         return None
     else:
         return matched_pos
+
+
+'''
+Do full text search on query
+Return a list of index tuple of matched query tokens or None if no token matched
+'''
+def search_query(value, tokens):
+    matched_pos = []
+    for token, position in tokens.items():  # position is a tuple of (start idx, end idx)
+
+        # Assume value can be either a list of string or a string. Could it also be dict?
+        if isinstance(value, list):  # value is a list of string
+            for v in value:
+                if token in v:
+                    matched_pos.append(position)
+                    break
+        else:  # value is string
+            if token in str(value):
+                matched_pos.append(position)
+
+    if len(matched_pos) == 0:
+        return None
+    else:
+        return matched_pos
+
+
+
+
+'''
+Tokenize query, return a dictionary with structure {token: (start index in query, end index..)}
+No keyword included in the result
+'''
+def tokenize_query(query_formatted):
+    tokens = {}
+    lines = query_formatted.splitlines()  # Process query line by line
+    processed_lines_len = 0
+    for i in range(len(lines)):
+        if i > 0:
+            # +1 because of newline character has length 1
+            processed_lines_len += len(lines[i - 1]) + 1
+
+        tokenized_line = re.split(' |\(|\)|,', lines[i])
+        print('tokenized line: ' + str(tokenized_line))
+        for token in tokenized_line:
+            # token = token.strip(' ,()')
+            if token.upper() is not '' and token.upper() not in node_types.KEYWORDS:
+                index_in_query = lines[i].index(token) + processed_lines_len
+                tokens[token] = (index_in_query, index_in_query+len(token))
+
+    return tokens
 
 
 if __name__ == "__main__": main()
