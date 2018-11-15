@@ -111,13 +111,12 @@ def build_invert_relation(query_formatted, tree):
                 if not hasattr(node, field):
                     continue
                 value = getattr(node, field)
-                matched_pos = search_query(value, tokens)
+                matched_pos = search_query(value, tokens, query_formatted)
                 if matched_pos is not None:
                     if node in match_dict:
                         match_dict[node] = match_dict[node] + matched_pos
                     else:
                         match_dict[node] = matched_pos
-
     return match_dict
 
 
@@ -149,26 +148,34 @@ def search_tree(token, root):
 Do full text search on query
 Return a list of index tuple of matched query tokens or None if no token matched
 '''
-def search_query(value, tokens):
+def search_query(value, tokens, query_formatted):
     matched_pos = []
-    for token, position in tokens.items():  # position is a tuple of (start idx, end idx)
+    if isinstance(value, list):
+        for v in value:
+            regex_matches = re.finditer(v, query_formatted)
+            for match in regex_matches:
+                matched_pos.append((match.start(), match.end()))
+    else:
+        regex_matches = re.finditer(str(value).strip('()'), query_formatted)
+        for match in regex_matches:
+            matched_pos.append((match.start(), match.end()))
 
-        # Assume value can be either a list of string or a string. Could it also be dict?
-        if isinstance(value, list):  # value is a list of string
-            for v in value:
-                if token in v:
-                    matched_pos.append(position)
-                    break
-        else:  # value is string
-            if token in str(value):
-                matched_pos.append(position)
+    # for token, position in tokens.items():  # position is a tuple of (start idx, end idx)
+    #
+    #     # Assume value can be either a list of string or a string. Could it also be dict?
+    #     if isinstance(value, list):  # value is a list of string
+    #         for v in value:
+    #             if token in v:
+    #                 matched_pos.append(position)
+    #                 break
+    #     else:  # value is string
+    #         if token in str(value):
+    #             matched_pos.append(position)
 
     if len(matched_pos) == 0:
         return None
     else:
         return matched_pos
-
-
 
 
 '''
@@ -187,11 +194,16 @@ def tokenize_query(query_formatted):
         tokenized_line = re.split(' |\(|\)|,', lines[i])
         print('tokenized line: ' + str(tokenized_line))
         for token in tokenized_line:
-            # token = token.strip(' ,()')
+            token = token.strip(';')
             if token.upper() is not '' and token.upper() not in node_types.KEYWORDS:
-                index_in_query = lines[i].index(token) + processed_lines_len
-                tokens[token] = (index_in_query, index_in_query+len(token))
+                regex_matches = re.finditer(r'( |\(|,)'+token+'($| |\)|,)', lines[i])
+                for matched in regex_matches:
+                    tokens[token] = (matched.start() + processed_lines_len, matched.end() + processed_lines_len)
+                    print('appending token: ' + token + ', pos: ' + str(tokens[token]))
+                #index_in_query = lines[i].index(token) + processed_lines_len
+                #tokens[token] = (index_in_query, index_in_query+len(token))
 
+    print('Tokens:' + str(tokens))
     return tokens
 
 

@@ -16,7 +16,7 @@ def init():
     '''
     KEY_PROPERTY = {'LIMIT': ['Plan Rows'], 'SORT': ['Sort Key'], 'NESTED LOOP': [], 'MERGE JOIN': ['Merge Cond'],
                     'HASH': [], 'HASH JOIN': ['Hash Cond'], 'AGGREGATE': ['Group Key'], 'HASHAGGREGATE': ['Group Key'],
-                    'SEQ SCAN': ['Relation Name', 'Filter', 'Alias'], 'INDEX SCAN': ['Index Cond', 'Filter', 'Alias'],
+                    'SEQ SCAN': ['Relation Name', 'Filter'], 'INDEX SCAN': ['Index Cond', 'Filter'],
                     'INDEX ONLY SCAN': ['Index Cond', 'Filter', 'Alias'],
                     'BITMAP HEAP SCAN': ['Recheck Cond', 'Filter', 'Alias'],
                     'BITMAP INDEX SCAN': ['Index Cond', 'Filter', 'Alias'],
