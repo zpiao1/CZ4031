@@ -144,7 +144,7 @@ def search_tree(token, root):
         return matched_pos
 
 
-def search_query(value, tokens):
+def search_query(value, tokens, query_formatted):
     """
     Do full text search on query
     Return a list of index tuple of matched query tokens or None if no token matched
@@ -196,12 +196,12 @@ def tokenize_query(query_formatted):
         for token in tokenized_line:
             token = token.strip(';')
             if token.upper() is not '' and token.upper() not in node_types.KEYWORDS:
-                regex_matches = re.finditer(r'( |\(|,)'+token+'($| |\)|,)', lines[i])
+                regex_matches = re.finditer(r'([ (,])' + token + '($| |\)|,)', lines[i])
                 for matched in regex_matches:
                     tokens[token] = (matched.start() + processed_lines_len, matched.end() + processed_lines_len)
                     print('appending token: ' + token + ', pos: ' + str(tokens[token]))
-                #index_in_query = lines[i].index(token) + processed_lines_len
-                #tokens[token] = (index_in_query, index_in_query + len(token))
+                # index_in_query = lines[i].index(token) + processed_lines_len
+                # tokens[token] = (index_in_query, index_in_query + len(token))
 
     print('Tokens:' + str(tokens))
     return tokens

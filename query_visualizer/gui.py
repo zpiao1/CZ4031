@@ -103,7 +103,7 @@ class QueryFrame(tk.Frame):
         self.text.grid(row=0, column=0)
         self.scrollbar = tk.Scrollbar(self, orient='vertical', command=self.text.yview)
         self.scrollbar.grid(row=0, column=1, sticky='ns')
-        self.text['yscrollcommand'] = self.scrollbar.set
+        self.text.configure(yscrollcommand=self.scrollbar.set)
 
         for node_type, color in NODE_COLORS.items():
             self.text.tag_configure(node_type, background=color[0], foreground=color[1])
@@ -151,13 +151,17 @@ class TableFrame(tk.Frame):
         table_view_style.configure('Treeview.Heading', font=('Google Sans Display', 14, 'bold'))
         self.table_view = ttk.Treeview(self)
         self.table_view['columns'] = ['Value']
-        self.table_view.column('#0', width=40)
+        self.table_view.column('#0', minwidth=0, width=200, stretch=tk.NO)
         self.table_view.heading('#0', text='Name', anchor='w')
         self.table_view.heading('Value', text='Value', anchor='w')
         self.table_view.grid(row=0, column=0, sticky='nswe')
 
-        self.scrollbar = tk.Scrollbar(self, orient='vertical', command=self.table_view)
+        self.scrollbar = tk.Scrollbar(self, orient='vertical', command=self.table_view.yview)
+        self.table_view.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.grid(row=0, column=1, sticky='ns')
+
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
 
     def show_node_info(self, node):
         raw_json = node.raw_json
@@ -225,8 +229,8 @@ if __name__ == '__main__':
 
     query_scrollbar = tk.Scrollbar(root, orient='vertical', command=query_text.yview)
     plan_scrollbar = tk.Scrollbar(root, orient='vertical', command=plan_text.yview)
-    query_text['yscrollcommand'] = query_scrollbar.set
-    plan_text['yscrollcommand'] = plan_scrollbar.set
+    query_text.configure(yscrollcommand=query_scrollbar.set)
+    plan_text.configure(yscrollcommand=plan_scrollbar.set)
 
     query_label.grid(row=0, sticky='w', padx=12, pady=(12, 0))
     query_text.grid(row=1, padx=(12, 0))
