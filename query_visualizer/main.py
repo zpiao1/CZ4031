@@ -1,14 +1,14 @@
+import copy
 import json
 import re
-import node_types
-import copy
-from anytree import AnyNode, RenderTree, PreOrderIter
+
 import sqlparse
+from anytree import AnyNode, RenderTree, PreOrderIter
+
+import node_types
 
 
 def main():
-    node_types.init()
-
     plan_path = './samplebig.json'
     query_path = './samplebig_q.sql'
 
@@ -48,11 +48,11 @@ def main():
             print('tokens - ' + query_formatted[start:end] + '@' + str(start) + ':' + str(end))
 
 
-'''
-Build tree recursively, Some operations are commented out for making result looks clearer while testing.
-Currently using Node Type as node id and it is not unique. If needed can use a unique identifier for id.
-'''
 def build_tree(plans_list, parent=None):
+    """
+    Build tree recursively, Some operations are commented out for making result looks clearer while testing.
+    Currently using Node Type as node id and it is not unique. If needed can use a unique identifier for id.
+    """
     result_list = []
     for plan in plans_list:
         node_type = plan["Node Type"].upper()
@@ -73,7 +73,7 @@ def build_tree(plans_list, parent=None):
         raw_json = copy.deepcopy(plan)
         if "Plans" in plan:
             build_tree(plan["Plans"], node)  # Build sub tree
-            raw_json.pop("Plans")   # Don't put the entire subtree in the raw json
+            raw_json.pop("Plans")  # Don't put the entire subtree in the raw json
         if "Partial Mode" in plan:
             setattr(node, "Partial Mode", plan["Partial Mode"])
         if "Index Name" in plan:
@@ -83,12 +83,12 @@ def build_tree(plans_list, parent=None):
     return result_list
 
 
-'''
-Build relation between plan and query by iterating the tree
-Match a given token to all nodes that contain this token
-'''
 def build_relation(query_formatted, tree):
-    match_dict = {}   # {(start index of token, end): [list of matched nodes]}
+    """
+    Build relation between plan and query by iterating the tree
+    Match a given token to all nodes that contain this token
+    """
+    match_dict = {}  # {(start index of token, end): [list of matched nodes]}
     tokens = tokenize_query(query_formatted)
     for token, position in tokens.items():
         match_dict[(position[0], position[1])] = search_tree(token, tree)
@@ -96,11 +96,11 @@ def build_relation(query_formatted, tree):
     return match_dict
 
 
-'''
-Build relation between plan and query by iterating the tree
-Match a given node to all tokens that correlate
-'''
 def build_invert_relation(query_formatted, tree):
+    """
+    Build relation between plan and query by iterating the tree
+    Match a given node to all tokens that correlate
+    """
     match_dict = {}  # Has structure {node object : [list of tuples of index]}
     tokens = tokenize_query(query_formatted)
     for node in PreOrderIter(tree):
@@ -120,11 +120,11 @@ def build_invert_relation(query_formatted, tree):
     return match_dict
 
 
-'''
-Do the search by using built-in pre-order iteration
-Return a list of matched nodes or None if no node matched
-'''
 def search_tree(token, root):
+    """
+    Do the search by using built-in pre-order iteration
+    Return a list of matched nodes or None if no node matched
+    """
     matched_pos = []
     for node in PreOrderIter(root):
         # If a node is not defined in our searchable list, skip it
@@ -144,11 +144,11 @@ def search_tree(token, root):
         return matched_pos
 
 
-'''
-Do full text search on query
-Return a list of index tuple of matched query tokens or None if no token matched
-'''
-def search_query(value, tokens, query_formatted):
+def search_query(value, tokens):
+    """
+    Do full text search on query
+    Return a list of index tuple of matched query tokens or None if no token matched
+    """
     matched_pos = []
     if isinstance(value, list):
         for v in value:
@@ -178,11 +178,11 @@ def search_query(value, tokens, query_formatted):
         return matched_pos
 
 
-'''
-Tokenize query, return a dictionary with structure {token: (start index in query, end index..)}
-No keyword included in the result
-'''
 def tokenize_query(query_formatted):
+    """
+    Tokenize query, return a dictionary with structure {token: (start index in query, end index..)}
+    No keyword included in the result
+    """
     tokens = {}
     lines = query_formatted.splitlines()  # Process query line by line
     processed_lines_len = 0
@@ -191,7 +191,7 @@ def tokenize_query(query_formatted):
             # +1 because of newline character has length 1
             processed_lines_len += len(lines[i - 1]) + 1
 
-        tokenized_line = re.split(' |\(|\)|,', lines[i])
+        tokenized_line = re.split('[ (),]', lines[i])
         print('tokenized line: ' + str(tokenized_line))
         for token in tokenized_line:
             token = token.strip(';')
@@ -201,7 +201,7 @@ def tokenize_query(query_formatted):
                     tokens[token] = (matched.start() + processed_lines_len, matched.end() + processed_lines_len)
                     print('appending token: ' + token + ', pos: ' + str(tokens[token]))
                 #index_in_query = lines[i].index(token) + processed_lines_len
-                #tokens[token] = (index_in_query, index_in_query+len(token))
+                #tokens[token] = (index_in_query, index_in_query + len(token))
 
     print('Tokens:' + str(tokens))
     return tokens
